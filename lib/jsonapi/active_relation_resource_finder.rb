@@ -167,10 +167,9 @@ module JSONAPI
 
         context = options[:context]
 
-        records = records(context: context)
         related_klass = relationship.resource_klass
 
-        records, table_alias = apply_join(records, relationship, options)
+        records, table_alias = apply_join(records(context: context), relationship, options)
 
         sort_criteria = []
         options[:sort_criteria].try(:each) do |sort|

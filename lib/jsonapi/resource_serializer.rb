@@ -42,19 +42,19 @@ module JSONAPI
     end
 
     # Converts a resource_set to a hash, conforming to the JSONAPI structure
-    def serialize_resource_set_to_hash(result_set)
+    def serialize_resource_set_to_hash_single(resource_set)
 
       primary_objects = []
       included_objects = []
 
-      result_set.each_value do |values|
-        values.each_value do |value|
-          serialized_result = object_hash(value[:resource], value[:relationships])
+      resource_set.resource_klasses.each_value do |resource_klass|
+        resource_klass.each_value do |resource|
+          serialized_resource = object_hash(resource[:resource], resource[:relationships])
 
-          if value[:primary]
-            primary_objects.push(serialized_result)
+          if resource[:primary]
+            primary_objects.push(serialized_resource)
           else
-            included_objects.push(serialized_result)
+            included_objects.push(serialized_resource)
           end
         end
       end
@@ -66,19 +66,19 @@ module JSONAPI
       primary_hash
     end
 
-    def serialize_resources_set_to_hash(result_set)
+    def serialize_resource_set_to_hash_plural(resource_set)
 
       primary_objects = []
       included_objects = []
 
-      result_set.each_value do |resources|
-        resources.each_value do |resource|
-          serialized_result = object_hash(resource[:resource], resource[:relationships])
+      resource_set.resource_klasses.each_value do |resource_klass|
+        resource_klass.each_value do |resource|
+          serialized_resource = object_hash(resource[:resource], resource[:relationships])
 
           if resource[:primary]
-            primary_objects.push(serialized_result)
+            primary_objects.push(serialized_resource)
           else
-            included_objects.push(serialized_result)
+            included_objects.push(serialized_resource)
           end
         end
       end
@@ -89,27 +89,8 @@ module JSONAPI
       primary_hash
     end
 
-    def serialize_related_resources_set_to_hash(source_resource, result_set)
-
-      primary_objects = []
-      included_objects = []
-
-      result_set.each_value do |values|
-        values.each_value do |value|
-          serialized_result = object_hash(value[:resource], value[:relationships])
-
-          if value[:primary]
-            primary_objects.push(serialized_result)
-          else
-            included_objects.push(serialized_result)
-          end
-        end
-      end
-
-      primary_hash = { 'data' => primary_objects }
-
-      primary_hash['included'] = included_objects if included_objects.size > 0
-      primary_hash
+    def serialize_related_resource_set_to_hash_plural(resource_set, _source_resource)
+      return serialize_resource_set_to_hash_plural(resource_set)
     end
 
     def serialize_to_links_hash(source, requested_relationship, resource_ids)

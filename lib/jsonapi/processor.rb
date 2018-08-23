@@ -59,8 +59,9 @@ module JSONAPI
 
       resource_set = find_resource_set(resource_klass,
                                        include_directives,
-                                       serializer,
                                        find_options)
+
+      resource_set.populate!(serializer, context, find_options)
 
       page_options = result_options
       if (JSONAPI.configuration.top_level_meta_include_record_count || (paginator && paginator.class.requires_record_count))
@@ -96,8 +97,9 @@ module JSONAPI
 
       resource_set = find_resource_set(resource_klass,
                                        include_directives,
-                                       serializer,
                                        find_options)
+
+      resource_set.populate!(serializer, context, find_options)
 
       return JSONAPI::ResourceSetOperationResult.new(:ok, resource_set, result_options)
     end
@@ -128,7 +130,7 @@ module JSONAPI
       return JSONAPI::LinksObjectOperationResult.new(:ok,
                                                      parent_resource,
                                                      resource_klass._relationship(relationship_type),
-                                                     resource_id_tree[:resources].keys,
+                                                     resource_id_tree.resources.keys,
                                                      result_options)
     end
 
@@ -151,8 +153,9 @@ module JSONAPI
       resource_set = find_related_resource_set(source_resource,
                                                relationship_type,
                                                include_directives,
-                                               serializer,
                                                find_options)
+
+      resource_set.populate!(serializer, context, find_options)
 
       return JSONAPI::ResourceSetOperationResult.new(:ok, resource_set, result_options)
     end
@@ -183,8 +186,9 @@ module JSONAPI
       resource_set = find_related_resource_set(source_resource,
                                                relationship_type,
                                                include_directives,
-                                               serializer,
                                                find_options)
+
+      resource_set.populate!(serializer, context, find_options)
 
       opts = result_options
       if ((JSONAPI.configuration.top_level_meta_include_record_count) ||
@@ -233,9 +237,9 @@ module JSONAPI
 
       resource_set = find_resource_set(resource_klass,
                                        include_directives,
-                                       serializer,
                                        find_options)
 
+      resource_set.populate!(serializer, context, find_options)
 
       return JSONAPI::ResourceSetOperationResult.new((result == :completed ? :created : :accepted), resource_set, result_options)
     end
@@ -269,8 +273,9 @@ module JSONAPI
 
       resource_set = find_resource_set(resource_klass,
                                        include_directives,
-                                       serializer,
                                        find_options)
+
+      resource_set.populate!(serializer, context, find_options)
 
       return JSONAPI::ResourceSetOperationResult.new((result == :completed ? :ok : :accepted), resource_set, result_options)
     end
@@ -353,32 +358,23 @@ module JSONAPI
       options
     end
 
-    def find_resource_set(resource_klass, include_directives, serializer, options)
+    def find_resource_set(resource_klass, include_directives, options)
       include_related = include_directives.include_directives[:include_related] if include_directives
 
       resource_id_tree = find_resource_id_tree(resource_klass, options, include_related)
 
-      # Generate a set of resources that can be used to turn the resource_id_tree into a result set
-      resource_set = flatten_resource_id_tree(resource_id_tree)
-
-      populate_resource_set(resource_set, serializer, options)
-
-      resource_set
+      JSONAPI::ResourceSet.new(resource_id_tree)
     end
 
-    def find_related_resource_set(resource, relationship_name, include_directives, serializer, options)
+    def find_related_resource_set(resource, relationship_name, include_directives, options)
       include_related = include_directives.include_directives[:include_related] if include_directives
 
       resource_id_tree = find_resource_id_tree_from_resource_relationship(resource, relationship_name, options, include_related)
 
-      # Generate a set of resources that can be used to turn the resource_id_tree into a result set
-      resource_set = flatten_resource_id_tree(resource_id_tree)
-
-      populate_resource_set(resource_set, serializer, options)
-
-      resource_set
+      JSONAPI::ResourceSet.new(resource_id_tree)
     end
 
+    private
     def find_related_resource_id_tree(resource_klass, source_id, relationship_name, find_options, include_related)
       options = find_options.except(:include_directives)
       options[:cache] = resource_klass.caching?
@@ -400,9 +396,9 @@ module JSONAPI
         end
       end
 
-      included_relationships = get_related(relationship.resource_klass, resources, include_related, options)
+      related_resource_id_trees = get_related(relationship.resource_klass, resources, include_related, options)
 
-      { resources: resources, included: included_relationships }
+      ResourceIdTree.new(resources: resources, related_resource_id_trees: related_resource_id_trees)
     end
 
     def find_resource_id_tree(resource_klass, find_options, include_related)
@@ -418,9 +414,9 @@ module JSONAPI
         end
       end
 
-      included_relationships = get_related(resource_klass, resources, include_related, options.except(:filters, :sort_criteria))
+      related_resource_id_trees = get_related(resource_klass, resources, include_related, options.except(:filters, :sort_criteria))
 
-      { resources: resources, included: included_relationships }
+      ResourceIdTree.new(resources: resources, related_resource_id_trees: related_resource_id_trees)
     end
 
     def find_resource_id_tree_from_resource_relationship(resource, relationship_name, find_options, include_related)
@@ -442,9 +438,9 @@ module JSONAPI
 
       options = options.except(:filters)
 
-      included_relationships = get_related(resource_klass, resources, include_related, options)
+      related_resource_id_trees = get_related(resource_klass, resources, include_related, options)
 
-      { resources: resources, included: included_relationships }
+      ResourceIdTree.new(resources: resources, related_resource_id_trees: related_resource_id_trees)
     end
 
     # Gets the related resource connections for the source resources
@@ -453,7 +449,7 @@ module JSONAPI
     def get_related(resource_klass, source_resources, include_related, options)
       source_rids = source_resources.keys
 
-      related = {}
+      related_resource_id_trees = {}
 
       include_related.try(:keys).try(:each) do |key|
         relationship = resource_klass._relationship(key)
@@ -461,9 +457,7 @@ module JSONAPI
 
         cache_related = relationship.resource_klass.caching?
 
-        related[relationship_name] = {}
-        related[relationship_name][:relationship] = relationship
-        related[relationship_name][:resources] = {}
+        related_resource_id_trees[relationship_name] = ResourceIdTree.new(resources: {}, related_resource_id_trees: {}, relationship: relationship)
 
         find_related_resource_options = options.dup
         find_related_resource_options[:sort_criteria] = relationship.resource_klass.default_sort
@@ -474,7 +468,7 @@ module JSONAPI
         )
 
         related_identities.each_pair do |identity, v|
-          related[relationship_name][:resources][identity] =
+          related_resource_id_trees[relationship_name].resources[identity] =
               {
                   source_rids: v[:related][relationship_name],
                   relationships: {
@@ -483,11 +477,11 @@ module JSONAPI
               }
 
           if cache_related
-            related[relationship_name][:resources][identity][:cache_field] = v[:cache]
+            related_resource_id_trees[relationship_name].resources[identity][:cache_field] = v[:cache]
           end
         end
 
-        related[relationship_name][:resources].each do |related_rid, related_resource|
+        related_resource_id_trees[relationship_name].resources.each do |related_rid, related_resource|
           # add linkage to source records
           related_resource[:source_rids].each do |id|
             source_resource = source_resources[id]
@@ -496,115 +490,16 @@ module JSONAPI
           end
         end
 
-        # Now get the related resources for the currently found resources
-        included_resources = get_related(relationship.resource_klass,
-                                         related[relationship_name][:resources],
-                                         include_related[relationship_name][:include_related],
-                                         options)
+        # Now recursively get the related resources for the currently found resources
+        related_resources = get_related(relationship.resource_klass,
+                                        related_resource_id_trees[relationship_name].resources,
+                                        include_related[relationship_name][:include_related],
+                                        options)
 
-        related[relationship_name][:included] = included_resources
+        related_resource_id_trees[relationship_name].related_resource_id_trees = related_resources
       end
 
-      related
-    end
-
-    # flatten the resource id tree into groupings by resource klass
-    def flatten_resource_id_tree(resource_id_tree, flattened_tree = {})
-      resource_id_tree[:resources].each_pair do |resource_rid, resource_details|
-
-        resource_klass = resource_rid.resource_klass
-        id = resource_rid.id
-
-        flattened_tree[resource_klass] ||= {}
-
-        flattened_tree[resource_klass][id] ||= { primary: resource_details[:primary], relationships: {} }
-        flattened_tree[resource_klass][id][:cache_id] ||= resource_details[:cache_field]
-
-        resource_details[:relationships].try(:each_pair) do |relationship_name, details|
-          flattened_tree[resource_klass][id][:relationships][relationship_name] ||= { rids: [] }
-
-          if details[:rids] && details[:rids].is_a?(Array)
-            details[:rids].each do |related_rid|
-              flattened_tree[resource_klass][id][:relationships][relationship_name][:rids] << related_rid
-            end
-          end
-        end
-      end
-
-      included = resource_id_tree[:included]
-      included.try(:each_value) do |i|
-        flatten_resource_id_tree(i, flattened_tree)
-      end
-
-      flattened_tree
-    end
-
-    def populate_resource_set(resource_set, serializer, find_options)
-
-      resource_set.each_key do |resource_klass|
-        missed_ids = []
-
-        serializer_config_key = serializer.config_key(resource_klass).gsub("/", "_")
-        context_json = resource_klass.attribute_caching_context(context).to_json
-        context_b64 = JSONAPI.configuration.resource_cache_digest_function.call(context_json)
-        context_key = "ATTR-CTX-#{context_b64.gsub("/", "_")}"
-
-        if resource_klass.caching?
-          cache_ids = []
-
-          resource_set[resource_klass].each_pair do |k, v|
-            # Store the hashcode of the cache_field to avoid storing objects and to ensure precision isn't lost
-            # on timestamp types (i.e. string conversions dropping milliseconds)
-            cache_ids.push([k, resource_klass.hash_cache_field(v[:cache_id])])
-          end
-
-          found_resources = CachedResponseFragment.fetch_cached_fragments(
-              resource_klass,
-              serializer_config_key,
-              cache_ids,
-              context)
-
-          found_resources.each do |found_result|
-            resource = found_result[1]
-            if resource.nil?
-              missed_ids.push(found_result[0])
-            else
-              resource_set[resource_klass][resource.id][:resource] = resource
-            end
-          end
-        else
-          missed_ids = resource_set[resource_klass].keys
-        end
-
-        # fill in the missed resources, it there are any
-        unless missed_ids.empty?
-          filters = {resource_klass._primary_key => missed_ids}
-          find_opts = {
-              context: context,
-              fields: find_options[:fields] }
-
-          found_resources = resource_klass.find(filters, find_opts)
-
-          found_resources.each do |resource|
-            relationship_data = resource_set[resource_klass][resource.id][:relationships]
-
-            if resource_klass.caching?
-              (id, cr) = CachedResponseFragment.write(
-                  resource_klass,
-                  resource,
-                  serializer,
-                  serializer_config_key,
-                  context,
-                  context_key,
-                  relationship_data)
-
-              resource_set[resource_klass][id][:resource] = cr
-            else
-              resource_set[resource_klass][resource.id][:resource] = resource
-            end
-          end
-        end
-      end
+      related_resource_id_trees
     end
   end
 end

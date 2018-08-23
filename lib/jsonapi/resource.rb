@@ -434,7 +434,7 @@ module JSONAPI
       #   cache: <optional: the resource's cache value>
       #   attributes: <optional: attributes hash for attributes requested - currently unused>
       #   related: {
-      #     <relationship_name>: <ResourceIndentity of a source resource in find_related_fragments>
+      #     <relationship_name>: <ResourceIdentity of a source resource in find_related_fragments>
       #   }
       # }
       #
