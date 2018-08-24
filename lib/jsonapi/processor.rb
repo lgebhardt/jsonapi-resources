@@ -379,44 +379,28 @@ module JSONAPI
       options = find_options.except(:include_directives)
       options[:cache] = resource_klass.caching?
 
-      relationship = resource_klass._relationship(relationship_name)
+      fragments = resource_klass.find_related_fragments([source_id], relationship_name, options)
 
-      resources = {}
+      primary_resource_id_tree = ResourceIdTree.new
+      primary_resource_id_tree.add_primary_resource_fragments(fragments)
 
-      identities = resource_klass.find_related_fragments([source_id], relationship_name, options)
+      get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
 
-      identities.each do |identity, value|
-        resources[identity] = { id: identity,
-                                resource_klass: relationship.resource_klass,
-                                primary: true, relationships: {}
-        }
-
-        if resource_klass.caching?
-          resources[identity][:cache_field] = value[:cache]
-        end
-      end
-
-      related_resource_id_trees = get_related(relationship.resource_klass, resources, include_related, options)
-
-      ResourceIdTree.new(resources: resources, related_resource_id_trees: related_resource_id_trees)
+      primary_resource_id_tree
     end
 
     def find_resource_id_tree(resource_klass, find_options, include_related)
       options = find_options.except(:include_directives)
       options[:cache] = resource_klass.caching?
-      resources = {}
 
-      identities = resource_klass.find_fragments(find_options[:filters], options)
-      identities.each do |identity, values|
-        resources[identity] = { primary: true, relationships: {} }
-        if resource_klass.caching?
-          resources[identity][:cache_field] = values[:cache]
-        end
-      end
+      fragments = resource_klass.find_fragments(find_options[:filters], options)
 
-      related_resource_id_trees = get_related(resource_klass, resources, include_related, options.except(:filters, :sort_criteria))
+      primary_resource_id_tree = ResourceIdTree.new
+      primary_resource_id_tree.add_primary_resource_fragments(fragments)
 
-      ResourceIdTree.new(resources: resources, related_resource_id_trees: related_resource_id_trees)
+      get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
+
+      primary_resource_id_tree
     end
 
     def find_resource_id_tree_from_resource_relationship(resource, relationship_name, find_options, include_related)
@@ -425,81 +409,57 @@ module JSONAPI
       options = find_options.except(:include_directives)
       options[:cache] = relationship.resource_klass.caching?
 
-      identities = resource.class.find_related_fragments([resource.identity], relationship_name, options)
+      fragments = resource.class.find_related_fragments([resource.identity], relationship_name, options)
 
-      resources = {}
+      primary_resource_id_tree = ResourceIdTree.new
+      primary_resource_id_tree.add_primary_resource_fragments(fragments)
 
-      identities.each do |identity, values|
-        resources[identity] = { primary: true, relationships: {} }
-        if relationship.resource_klass.caching?
-          resources[identity][:cache_field] = values[:cache]
-        end
-      end
+      get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
 
-      options = options.except(:filters)
-
-      related_resource_id_trees = get_related(resource_klass, resources, include_related, options)
-
-      ResourceIdTree.new(resources: resources, related_resource_id_trees: related_resource_id_trees)
+      primary_resource_id_tree
     end
 
     # Gets the related resource connections for the source resources
     # Note: source_resources must all be of the same type. This precludes includes through polymorphic
     # relationships. ToDo: Prevent this when parsing the includes
-    def get_related(resource_klass, source_resources, include_related, options)
-      source_rids = source_resources.keys
+    def get_related(resource_klass, source_resource_id_tree, include_related, options)
+      source_rids = source_resource_id_tree.resources.keys
 
-      related_resource_id_trees = {}
+      source_resource_id_tree.related_resource_id_trees ||= {}
 
       include_related.try(:keys).try(:each) do |key|
         relationship = resource_klass._relationship(key)
         relationship_name = relationship.name.to_sym
 
-        cache_related = relationship.resource_klass.caching?
+        related_resource_id_tree = ResourceIdTree.new(relationship: relationship)
 
-        related_resource_id_trees[relationship_name] = ResourceIdTree.new(resources: {}, related_resource_id_trees: {}, relationship: relationship)
+        source_resource_id_tree.related_resource_id_trees[relationship_name] = related_resource_id_tree
 
         find_related_resource_options = options.dup
         find_related_resource_options[:sort_criteria] = relationship.resource_klass.default_sort
         find_related_resource_options[:cache] = resource_klass.caching?
 
-        related_identities = resource_klass.find_related_fragments(
+        related_fragments = resource_klass.find_related_fragments(
           source_rids, relationship_name, find_related_resource_options, key
         )
 
-        related_identities.each_pair do |identity, v|
-          related_resource_id_trees[relationship_name].resources[identity] =
-              {
-                  source_rids: v[:related][relationship_name],
-                  relationships: {
-                      relationship.parent_resource._type => { rids: v[:related][relationship_name] }
-                  }
-              }
+        related_resource_id_tree.add_related_resource_fragments(related_fragments, relationship)
 
-          if cache_related
-            related_resource_id_trees[relationship_name].resources[identity][:cache_field] = v[:cache]
-          end
-        end
-
-        related_resource_id_trees[relationship_name].resources.each do |related_rid, related_resource|
-          # add linkage to source records
+        related_resource_id_tree.resources.each do |related_rid, related_resource|
+          # back propagate linkage to source records
           related_resource[:source_rids].each do |id|
-            source_resource = source_resources[id]
+            source_resource = source_resource_id_tree.resources[id]
             source_resource[:relationships][relationship_name] ||= { rids: [] }
             source_resource[:relationships][relationship_name][:rids] << related_rid
           end
         end
 
         # Now recursively get the related resources for the currently found resources
-        related_resources = get_related(relationship.resource_klass,
-                                        related_resource_id_trees[relationship_name].resources,
-                                        include_related[relationship_name][:include_related],
-                                        options)
-
-        related_resource_id_trees[relationship_name].related_resource_id_trees = related_resources
+        get_related(relationship.resource_klass,
+                    related_resource_id_tree,
+                    include_related[relationship_name][:include_related],
+                    options)
       end
-
-      related_resource_id_trees
     end
   end
 end
