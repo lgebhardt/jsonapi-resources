@@ -381,8 +381,8 @@ module JSONAPI
 
       fragments = resource_klass.find_related_fragments([source_id], relationship_name, options)
 
-      primary_resource_id_tree = ResourceIdTree.new
-      primary_resource_id_tree.add_primary_resource_fragments(fragments)
+      primary_resource_id_tree = PrimaryResourceIdTree.new
+      primary_resource_id_tree.add_resource_fragments(fragments)
 
       get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
 
@@ -395,8 +395,8 @@ module JSONAPI
 
       fragments = resource_klass.find_fragments(find_options[:filters], options)
 
-      primary_resource_id_tree = ResourceIdTree.new
-      primary_resource_id_tree.add_primary_resource_fragments(fragments)
+      primary_resource_id_tree = PrimaryResourceIdTree.new
+      primary_resource_id_tree.add_resource_fragments(fragments)
 
       get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
 
@@ -411,8 +411,8 @@ module JSONAPI
 
       fragments = resource.class.find_related_fragments([resource.identity], relationship_name, options)
 
-      primary_resource_id_tree = ResourceIdTree.new
-      primary_resource_id_tree.add_primary_resource_fragments(fragments)
+      primary_resource_id_tree = PrimaryResourceIdTree.new
+      primary_resource_id_tree.add_resource_fragments(fragments)
 
       get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
 
@@ -429,10 +429,6 @@ module JSONAPI
         relationship = resource_klass._relationship(key)
         relationship_name = relationship.name.to_sym
 
-        related_resource_id_tree = ResourceIdTree.new(relationship)
-
-        source_resource_id_tree.add_related_resource_id_tree(relationship_name, related_resource_id_tree)
-
         find_related_resource_options = options.dup
         find_related_resource_options[:sort_criteria] = relationship.resource_klass.default_sort
         find_related_resource_options[:cache] = resource_klass.caching?
@@ -441,16 +437,8 @@ module JSONAPI
           source_rids, relationship_name, find_related_resource_options, key
         )
 
-        related_resource_id_tree.add_related_resource_fragments(related_fragments, relationship)
-
-        related_resource_id_tree.resources.each do |related_rid, related_resource|
-          # back propagate linkage to source records
-          related_resource[:source_rids].each do |id|
-            source_resource = source_resource_id_tree.resources[id]
-            source_resource[:relationships][relationship_name] ||= { rids: [] }
-            source_resource[:relationships][relationship_name][:rids] << related_rid
-          end
-        end
+        related_resource_id_tree = RelatedResourceIdTree.new(relationship, source_resource_id_tree)
+        related_resource_id_tree.add_resource_fragments(related_fragments, relationship)
 
         # Now recursively get the related resources for the currently found resources
         get_related(relationship.resource_klass,

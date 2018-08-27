@@ -59,7 +59,7 @@ class DefaultProcessorTest < ActionDispatch::IntegrationTest
   end
 
   def test_id_tree_without_includes_should_be_a_resource_id_tree
-    assert $id_tree_no_includes.is_a?(JSONAPI::ResourceIdTree)
+    assert $id_tree_no_includes.is_a?(JSONAPI::PrimaryResourceIdTree)
   end
 
   def test_id_tree_without_includes_should_have_resources
@@ -77,12 +77,12 @@ class DefaultProcessorTest < ActionDispatch::IntegrationTest
 
 
   def test_id_tree_has_one_includes_should_be_a_resource_id_tree
-    assert $id_tree_has_one_includes.is_a?(JSONAPI::ResourceIdTree)
+    assert $id_tree_has_one_includes.is_a?(JSONAPI::PrimaryResourceIdTree)
   end
 
   def test_id_tree_has_one_includes_should_have_included_resources
     assert $id_tree_has_one_includes.related_resource_id_trees.is_a?(Hash)
-    assert $id_tree_has_one_includes.related_resource_id_trees[:author].is_a?(JSONAPI::ResourceIdTree)
+    assert $id_tree_has_one_includes.related_resource_id_trees[:author].is_a?(JSONAPI::RelatedResourceIdTree)
     assert_equal 2, $id_tree_has_one_includes.related_resource_id_trees[:author].resources.size
   end
 
