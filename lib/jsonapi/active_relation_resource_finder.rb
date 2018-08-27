@@ -83,7 +83,7 @@ module JSONAPI
         records.pluck(*pluck_fields).collect do |row|
           rid = JSONAPI::ResourceIdentity.new(self, pluck_fields.length == 1 ? row : row[0])
 
-          fragments[rid] ||= JSONAPI::ResourceFragment.new(identity: rid)
+          fragments[rid] ||= JSONAPI::ResourceFragment.new(rid)
           attributes_offset = 1
 
           if cache_field
@@ -230,7 +230,7 @@ module JSONAPI
           unless row[1].nil?
             rid = JSONAPI::ResourceIdentity.new(related_klass, row[1])
 
-            related_fragments[rid] ||= JSONAPI::ResourceFragment.new(identity: rid, related: { relation_name => [] })
+            related_fragments[rid] ||= JSONAPI::ResourceFragment.new(rid)
 
             attributes_offset = 2
 
@@ -240,10 +240,10 @@ module JSONAPI
             end
 
             model_fields.each_with_index do |k, idx|
-              related_fragments[rid].attributes[k[0]] = cast_to_attribute_type(row[idx + attributes_offset], k[1][:type])
+              related_fragments[rid].add_attribute(k[0], cast_to_attribute_type(row[idx + attributes_offset], k[1][:type]))
             end
 
-            related_fragments[rid].related[relation_name] << JSONAPI::ResourceIdentity.new(self, row[0])
+            related_fragments[rid].add_related(relation_name, JSONAPI::ResourceIdentity.new(self, row[0]))
           end
         end
 
@@ -335,9 +335,9 @@ module JSONAPI
             related_klass = resource_klass_for(row[2])
 
             rid = JSONAPI::ResourceIdentity.new(related_klass, row[1])
-            related_fragments[rid] ||= JSONAPI::ResourceFragment.new(identity: rid, related: { relation_name => [] })
+            related_fragments[rid] ||= JSONAPI::ResourceFragment.new(rid)
 
-            related_fragments[rid].related[relation_name] << JSONAPI::ResourceIdentity.new(self, row[0])
+            related_fragments[rid].add_related(relation_name, JSONAPI::ResourceIdentity.new(self, row[0]))
 
             relation_position = relation_positions[row[2]]
             model_fields = relation_position[:model_fields]
@@ -352,9 +352,8 @@ module JSONAPI
             end
 
             if attributes.length > 0
-              related_fragments[rid].attributes= {}
               model_fields.each_with_index do |k, idx|
-                related_fragments[rid].attributes[k[0]] = cast_to_attribute_type(row[idx + field_offset + attributes_offset], k[1][:type])
+                related_fragments[rid].add_attribute(k[0], cast_to_attribute_type(row[idx + field_offset + attributes_offset], k[1][:type]))
               end
             end
           end
