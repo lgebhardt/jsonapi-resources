@@ -8,7 +8,7 @@ module JSONAPI
   # attributes - resource attributes (Todo: optionally use these for faster responses by bypassing model instantiation)
 
   class ResourceFragment
-    attr :identity, :cache, :attributes, :related
+    attr_reader :identity, :cache, :attributes, :related
 
     def initialize(identity)
       @identity = identity
