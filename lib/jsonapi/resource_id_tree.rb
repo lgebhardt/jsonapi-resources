@@ -5,9 +5,9 @@ module JSONAPI
   # the resource instances will be fetched from the cache or the record store.
   class ResourceIdTree
 
-    attr_accessor :resources, :related_resource_id_trees, :relationship
+    attr_reader :resources, :related_resource_id_trees, :relationship
 
-    def initialize(relationship: nil)
+    def initialize(relationship = nil)
       @relationship = relationship
 
       @resources ||= {}
@@ -22,9 +22,9 @@ module JSONAPI
 
     def add_primary_resource_fragment(fragment)
       identity = fragment.identity
-      resources[identity] = { primary: true, relationships: {} }
+      @resources[identity] = { primary: true, relationships: {} }
       if identity.resource_klass.caching?
-        resources[identity][:cache_field] = fragment.cache
+        @resources[identity][:cache_field] = fragment.cache
       end
     end
 
@@ -37,15 +37,19 @@ module JSONAPI
     def add_related_resource_fragment(fragment, relationship)
       identity = fragment.identity
       relationship_name = relationship.name.to_sym
-      resources[identity] = {
+      @resources[identity] = {
         source_rids: fragment.related[relationship_name],
         relationships: {
             relationship.parent_resource._type => { rids: fragment.related[relationship_name] }
         }
       }
       if identity.resource_klass.caching?
-        resources[identity][:cache_field] = fragment.cache
+        @resources[identity][:cache_field] = fragment.cache
       end
+    end
+
+    def add_related_resource_id_tree(relationship_name, resource_id_tree)
+      @related_resource_id_trees[relationship_name] = resource_id_tree
     end
   end
 end

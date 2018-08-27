@@ -425,15 +425,13 @@ module JSONAPI
     def get_related(resource_klass, source_resource_id_tree, include_related, options)
       source_rids = source_resource_id_tree.resources.keys
 
-      source_resource_id_tree.related_resource_id_trees ||= {}
-
       include_related.try(:keys).try(:each) do |key|
         relationship = resource_klass._relationship(key)
         relationship_name = relationship.name.to_sym
 
-        related_resource_id_tree = ResourceIdTree.new(relationship: relationship)
+        related_resource_id_tree = ResourceIdTree.new(relationship)
 
-        source_resource_id_tree.related_resource_id_trees[relationship_name] = related_resource_id_tree
+        source_resource_id_tree.add_related_resource_id_tree(relationship_name, related_resource_id_tree)
 
         find_related_resource_options = options.dup
         find_related_resource_options[:sort_criteria] = relationship.resource_klass.default_sort
