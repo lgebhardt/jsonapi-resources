@@ -21,10 +21,10 @@ module JSONAPI
     end
 
     def add_primary_resource_fragment(fragment)
-      identity = fragment[:identity]
+      identity = fragment.identity
       resources[identity] = { primary: true, relationships: {} }
       if identity.resource_klass.caching?
-        resources[identity][:cache_field] = fragment[:cache]
+        resources[identity][:cache_field] = fragment.cache
       end
     end
 
@@ -35,16 +35,16 @@ module JSONAPI
     end
 
     def add_related_resource_fragment(fragment, relationship)
-      identity = fragment[:identity]
+      identity = fragment.identity
       relationship_name = relationship.name.to_sym
       resources[identity] = {
-        source_rids: fragment[:related][relationship_name],
+        source_rids: fragment.related[relationship_name],
         relationships: {
-            relationship.parent_resource._type => { rids: fragment[:related][relationship_name] }
+            relationship.parent_resource._type => { rids: fragment.related[relationship_name] }
         }
       }
       if identity.resource_klass.caching?
-        resources[identity][:cache_field] = fragment[:cache]
+        resources[identity][:cache_field] = fragment.cache
       end
     end
   end

@@ -82,17 +82,17 @@ module JSONAPI
         fragments = {}
         records.pluck(*pluck_fields).collect do |row|
           rid = JSONAPI::ResourceIdentity.new(self, pluck_fields.length == 1 ? row : row[0])
-          fragments[rid] = { identity: rid }
+
+          fragments[rid] ||= JSONAPI::ResourceFragment.new(identity: rid)
           attributes_offset = 1
 
           if cache_field
-            fragments[rid][:cache] = cast_to_attribute_type(row[1], cache_field[:type])
+            fragments[rid].cache = cast_to_attribute_type(row[1], cache_field[:type])
             attributes_offset+= 1
           end
 
-          fragments[rid][:attributes]= {} unless model_fields.empty?
           model_fields.each_with_index do |k, idx|
-            fragments[rid][:attributes][k[0]]= cast_to_attribute_type(row[idx + attributes_offset], k[1][:type])
+            fragments[rid].attributes[k[0]]= cast_to_attribute_type(row[idx + attributes_offset], k[1][:type])
           end
         end
 
@@ -229,21 +229,21 @@ module JSONAPI
         rows.each do |row|
           unless row[1].nil?
             rid = JSONAPI::ResourceIdentity.new(related_klass, row[1])
-            related_fragments[rid] ||= { identity: rid, related: {relation_name => [] } }
+
+            related_fragments[rid] ||= JSONAPI::ResourceFragment.new(identity: rid, related: { relation_name => [] })
 
             attributes_offset = 2
 
             if cache_field
-              related_fragments[rid][:cache] = cast_to_attribute_type(row[attributes_offset], cache_field[:type])
+              related_fragments[rid].cache = cast_to_attribute_type(row[attributes_offset], cache_field[:type])
               attributes_offset+= 1
             end
 
-            related_fragments[rid][:attributes]= {} unless model_fields.empty?
             model_fields.each_with_index do |k, idx|
-              related_fragments[rid][:attributes][k[0]] = cast_to_attribute_type(row[idx + attributes_offset], k[1][:type])
+              related_fragments[rid].attributes[k[0]] = cast_to_attribute_type(row[idx + attributes_offset], k[1][:type])
             end
 
-            related_fragments[rid][:related][relation_name] << JSONAPI::ResourceIdentity.new(self, row[0])
+            related_fragments[rid].related[relation_name] << JSONAPI::ResourceIdentity.new(self, row[0])
           end
         end
 
@@ -335,8 +335,9 @@ module JSONAPI
             related_klass = resource_klass_for(row[2])
 
             rid = JSONAPI::ResourceIdentity.new(related_klass, row[1])
-            related_fragments[rid] ||= { identity: rid, related: { relation_name => [] } }
-            related_fragments[rid][:related][relation_name] << JSONAPI::ResourceIdentity.new(self, row[0])
+            related_fragments[rid] ||= JSONAPI::ResourceFragment.new(identity: rid, related: { relation_name => [] })
+
+            related_fragments[rid].related[relation_name] << JSONAPI::ResourceIdentity.new(self, row[0])
 
             relation_position = relation_positions[row[2]]
             model_fields = relation_position[:model_fields]
@@ -346,14 +347,14 @@ module JSONAPI
             attributes_offset = 0
 
             if cache_field
-              related_fragments[rid][:cache] = cast_to_attribute_type(row[field_offset], cache_field[:type])
+              related_fragments[rid].cache = cast_to_attribute_type(row[field_offset], cache_field[:type])
               attributes_offset+= 1
             end
 
             if attributes.length > 0
-              related_fragments[rid][:attributes]= {}
+              related_fragments[rid].attributes= {}
               model_fields.each_with_index do |k, idx|
-                related_fragments[rid][:attributes][k[0]] = cast_to_attribute_type(row[idx + field_offset + attributes_offset], k[1][:type])
+                related_fragments[rid].attributes[k[0]] = cast_to_attribute_type(row[idx + field_offset + attributes_offset], k[1][:type])
               end
             end
           end

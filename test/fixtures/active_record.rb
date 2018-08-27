@@ -1414,7 +1414,7 @@ module BreedResourceFinder
       fragments = {}
       find_records(filters, options).each do |breed|
         rid = JSONAPI::ResourceIdentity.new(BreedResource, breed.id)
-        fragments[rid] = { identity: rid, cache_field: nil }
+        fragments[rid] = JSONAPI::ResourceFragment.new(identity: rid)
       end
       fragments
     end
