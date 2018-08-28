@@ -437,8 +437,8 @@ module JSONAPI
           source_rids, relationship_name, find_related_resource_options, key
         )
 
-        related_resource_id_tree = RelatedResourceIdTree.new(relationship, source_resource_id_tree)
-        related_resource_id_tree.add_resource_fragments(related_fragments, relationship)
+        related_resource_id_tree = source_resource_id_tree.fetch_related_resource_id_tree(relationship)
+        related_resource_id_tree.add_resource_fragments(related_fragments)
 
         # Now recursively get the related resources for the currently found resources
         get_related(relationship.resource_klass,

@@ -7,8 +7,10 @@ module JSONAPI
 
     attr_reader :resources, :related_resource_id_trees
 
-    def add_related_resource_id_tree(relationship_name, resource_id_tree)
-      @related_resource_id_trees[relationship_name] = resource_id_tree
+    # Gets the related Resource Id Tree for a relationship, and creates it first if it does not exist
+    def fetch_related_resource_id_tree(relationship)
+      relationship_name = relationship.name.to_sym
+      @related_resource_id_trees[relationship_name] ||= RelatedResourceIdTree.new(relationship, self)
     end
   end
 
@@ -36,30 +38,29 @@ module JSONAPI
 
   class RelatedResourceIdTree < ResourceIdTree
 
-    attr_reader :relationship, :source_resource_id_tree
+    attr_reader :parent_relationship, :source_resource_id_tree
 
-    def initialize(relationship, source_resource_id_tree)
+    def initialize(parent_relationship, source_resource_id_tree)
       @resources ||= {}
       @related_resource_id_trees ||= {}
 
-      @relationship = relationship
+      @parent_relationship = parent_relationship
+      @parent_relationship_name = parent_relationship.name.to_sym
       @source_resource_id_tree = source_resource_id_tree
-      @source_resource_id_tree.add_related_resource_id_tree(relationship.name.to_sym, self)
     end
 
-    def add_resource_fragments(fragments, relationship)
+    def add_resource_fragments(fragments)
       fragments.each_value do |fragment|
-        add_resource_fragment(fragment, relationship)
+        add_resource_fragment(fragment)
       end
     end
 
-    def add_resource_fragment(fragment, relationship)
+    def add_resource_fragment(fragment)
       identity = fragment.identity
-      relationship_name = relationship.name.to_sym
       @resources[identity] = {
-          source_rids: fragment.related[relationship_name],
+          source_rids: fragment.related[@parent_relationship_name],
           relationships: {
-              relationship.parent_resource._type => { rids: fragment.related[relationship_name] }
+              @parent_relationship.parent_resource._type => { rids: fragment.related[@parent_relationship_name] }
           }
       }
       if identity.resource_klass.caching?
@@ -67,10 +68,10 @@ module JSONAPI
       end
 
       # back propagate linkage to source record
-      fragment.related[relationship_name].each do |rid|
+      fragment.related[@parent_relationship_name].each do |rid|
         source_resource = source_resource_id_tree.resources[rid]
-        source_resource[:relationships][relationship_name] ||= { rids: [] }
-        source_resource[:relationships][relationship_name][:rids] << identity
+        source_resource[:relationships][@parent_relationship_name] ||= { rids: [] }
+        source_resource[:relationships][@parent_relationship_name][:rids] << identity
       end
     end
   end
