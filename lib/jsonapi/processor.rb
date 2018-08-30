@@ -382,7 +382,7 @@ module JSONAPI
       fragments = resource_klass.find_related_fragments([source_id], relationship_name, options)
 
       primary_resource_id_tree = PrimaryResourceIdTree.new
-      primary_resource_id_tree.add_resource_fragments(fragments)
+      primary_resource_id_tree.add_resource_fragments(fragments, include_related)
 
       get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
 
@@ -396,7 +396,7 @@ module JSONAPI
       fragments = resource_klass.find_fragments(find_options[:filters], options)
 
       primary_resource_id_tree = PrimaryResourceIdTree.new
-      primary_resource_id_tree.add_resource_fragments(fragments)
+      primary_resource_id_tree.add_resource_fragments(fragments, include_related)
 
       get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
 
@@ -412,7 +412,7 @@ module JSONAPI
       fragments = resource.class.find_related_fragments([resource.identity], relationship_name, options)
 
       primary_resource_id_tree = PrimaryResourceIdTree.new
-      primary_resource_id_tree.add_resource_fragments(fragments)
+      primary_resource_id_tree.add_resource_fragments(fragments, include_related)
 
       get_related(resource_klass, primary_resource_id_tree, include_related, options.except(:filters, :sort_criteria))
 
@@ -438,7 +438,7 @@ module JSONAPI
         )
 
         related_resource_id_tree = source_resource_id_tree.fetch_related_resource_id_tree(relationship)
-        related_resource_id_tree.add_resource_fragments(related_fragments)
+        related_resource_id_tree.add_resource_fragments(related_fragments, include_related[key][include_related])
 
         # Now recursively get the related resources for the currently found resources
         get_related(relationship.resource_klass,
