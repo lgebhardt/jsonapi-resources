@@ -60,7 +60,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(AuthorResource, 1001), related_fragments.keys[0]
     assert_equal JSONAPI::ResourceIdentity.new(AuthorResource, 1001), related_fragments.values[0].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 2, related_fragments.values[0].related[:author].length
+    assert_equal 2, related_fragments.values[0].related_from.length
   end
 
   def test_find_related_has_one_fragments_cache_field
@@ -75,7 +75,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(AuthorResource, 1001), related_fragments.keys[0]
     assert_equal JSONAPI::ResourceIdentity.new(AuthorResource, 1001), related_fragments.values[0].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 2, related_fragments.values[0].related[:author].length
+    assert_equal 2, related_fragments.values[0].related_from.length
     assert related_fragments.values[0].cache.is_a?(ActiveSupport::TimeWithZone)
   end
 
@@ -91,7 +91,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(AuthorResource, 1001), related_fragments.keys[0]
     assert_equal JSONAPI::ResourceIdentity.new(AuthorResource, 1001), related_fragments.values[0].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 2, related_fragments.values[0].related[:author].length
+    assert_equal 2, related_fragments.values[0].related_from.length
     assert_equal 1, related_fragments.values[0].attributes.length
     assert related_fragments.values[0].cache.is_a?(ActiveSupport::TimeWithZone)
     assert_equal 'Joe Author', related_fragments.values[0].attributes[:name]
@@ -110,8 +110,8 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 501), related_fragments.keys[0]
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 501), related_fragments.values[0].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 1, related_fragments.values[0].related[:tags].length
-    assert_equal 2, related_fragments[JSONAPI::ResourceIdentity.new(TagResource, 502)].related[:tags].length
+    assert_equal 1, related_fragments.values[0].related_from.length
+    assert_equal 2, related_fragments[JSONAPI::ResourceIdentity.new(TagResource, 502)].related_from.length
   end
 
   def test_find_related_has_many_fragments_pagination
@@ -125,7 +125,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 516), related_fragments.keys[0]
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 516), related_fragments.values[0].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 1, related_fragments.values[0].related[:tags].length
+    assert_equal 1, related_fragments.values[0].related_from.length
   end
 
   def test_find_related_has_many_fragments_pagination_included_key
@@ -139,7 +139,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 502), related_fragments.keys[0]
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 502), related_fragments.values[0].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 1, related_fragments.values[0].related[:tags].length
+    assert_equal 1, related_fragments.values[0].related_from.length
   end
 
   def test_find_related_has_many_fragments_cache_field
@@ -155,8 +155,8 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 501), related_fragments.keys[0]
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 501), related_fragments.values[0].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 1, related_fragments.values[0].related[:tags].length
-    assert_equal 2, related_fragments[JSONAPI::ResourceIdentity.new(TagResource, 502)].related[:tags].length
+    assert_equal 1, related_fragments.values[0].related_from.length
+    assert_equal 2, related_fragments[JSONAPI::ResourceIdentity.new(TagResource, 502)].related_from.length
     assert related_fragments.values[0].cache.is_a?(ActiveSupport::TimeWithZone)
   end
 
@@ -173,8 +173,8 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 501), related_fragments.keys[0]
     assert_equal JSONAPI::ResourceIdentity.new(TagResource, 501), related_fragments.values[0].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 1, related_fragments.values[0].related[:tags].length
-    assert_equal 2, related_fragments[JSONAPI::ResourceIdentity.new(TagResource, 502)].related[:tags].length
+    assert_equal 1, related_fragments.values[0].related_from.length
+    assert_equal 2, related_fragments[JSONAPI::ResourceIdentity.new(TagResource, 502)].related_from.length
     assert_equal 1, related_fragments.values[0].attributes.length
     assert related_fragments.values[0].cache.is_a?(ActiveSupport::TimeWithZone)
     assert_equal 'short', related_fragments.values[0].attributes[:name]
@@ -194,7 +194,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(DocumentResource, 1), related_fragments.keys[1]
     assert_equal JSONAPI::ResourceIdentity.new(DocumentResource, 1), related_fragments.values[1].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 1, related_fragments.values[0].related[:imageable].length
+    assert_equal 1, related_fragments.values[0].related_from.length
     assert_equal JSONAPI::ResourceIdentity.new(ProductResource, 1), related_fragments.values[0].identity
   end
 
@@ -212,7 +212,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(DocumentResource, 1), related_fragments.keys[1]
     assert_equal JSONAPI::ResourceIdentity.new(DocumentResource, 1), related_fragments.values[1].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 1, related_fragments.values[0].related[:imageable].length
+    assert_equal 1, related_fragments.values[0].related_from.length
     assert related_fragments.values[0].cache.is_a?(ActiveSupport::TimeWithZone)
   end
 
@@ -230,7 +230,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal JSONAPI::ResourceIdentity.new(DocumentResource, 1), related_fragments.keys[1]
     assert_equal JSONAPI::ResourceIdentity.new(DocumentResource, 1), related_fragments.values[1].identity
     assert related_fragments.values[0].is_a?(JSONAPI::ResourceFragment)
-    assert_equal 1, related_fragments.values[0].related[:imageable].length
+    assert_equal 1, related_fragments.values[0].related_from.length
     assert_equal 1, related_fragments.values[0].attributes.length
     assert related_fragments.values[0].cache.is_a?(ActiveSupport::TimeWithZone)
     assert_equal 'Enterprise Gizmo', related_fragments.values[0].attributes[:name]

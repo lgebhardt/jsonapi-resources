@@ -4,30 +4,37 @@ module JSONAPI
   #
   # The following partial resource data may be stored
   # cache - the value of the cache field for the resource instance
-  # related - a hash of arrays of related resource identities, grouped by relationship name
-  # attributes - resource attributes (Todo: optionally use these for faster responses by bypassing model instantiation)
+  # related_from - a set of related resource identities that loaded the fragment
+  #
+  # Todo: optionally use these for faster responses by bypassing model instantiation)
+  # relationships - a hash of arrays of related resource identities, grouped by relationship name
+  # attributes - resource attributes
 
   class ResourceFragment
-    attr_reader :identity, :cache, :attributes, :related
+    attr_reader :identity,
+                :cache,
+                :related_from,
+                :attributes,
+                :relationships
 
     def initialize(identity)
       @identity = identity
       @cache = nil
+      @related_from = Set.new
       @attributes = {}
-      @related = {}
+      @relationships = {}
     end
 
     def cache=(cache)
       @cache = cache
     end
 
-    def add_attribute(name, value)
-      @attributes[name] = value
+    def add_related_from(identity)
+      @related_from << identity
     end
 
-    def add_related(relationship_name, identity)
-      @related[relationship_name] ||= []
-      @related[relationship_name] << identity
+    def add_attribute(name, value)
+      @attributes[name] = value
     end
   end
 end

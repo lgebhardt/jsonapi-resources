@@ -222,8 +222,6 @@ module JSONAPI
 
         rows = records.pluck(*pluck_fields)
 
-        relation_name = relationship.name.to_sym
-
         related_fragments = {}
 
         rows.each do |row|
@@ -243,7 +241,7 @@ module JSONAPI
               related_fragments[rid].add_attribute(k[0], cast_to_attribute_type(row[idx + attributes_offset], k[1][:type]))
             end
 
-            related_fragments[rid].add_related(relation_name, JSONAPI::ResourceIdentity.new(self, row[0]))
+            related_fragments[rid].add_related_from(JSONAPI::ResourceIdentity.new(self, row[0]))
           end
         end
 
@@ -326,8 +324,6 @@ module JSONAPI
 
         rows = records.pluck(*pluck_fields)
 
-        relation_name = relationship.name.to_sym
-
         related_fragments = {}
 
         rows.each do |row|
@@ -337,7 +333,7 @@ module JSONAPI
             rid = JSONAPI::ResourceIdentity.new(related_klass, row[1])
             related_fragments[rid] ||= JSONAPI::ResourceFragment.new(rid)
 
-            related_fragments[rid].add_related(relation_name, JSONAPI::ResourceIdentity.new(self, row[0]))
+            related_fragments[rid].add_related_from(JSONAPI::ResourceIdentity.new(self, row[0]))
 
             relation_position = relation_positions[row[2]]
             model_fields = relation_position[:model_fields]

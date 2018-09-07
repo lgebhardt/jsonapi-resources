@@ -21,7 +21,7 @@ module JSONAPI
 
     def init_included_relationships(resource, include_related)
       include_related && include_related.each_key do |relationship_name|
-        resource[:relationships][relationship_name] ||= {rids: []}
+        resource[:relationships][relationship_name] ||= { rids: Set.new }
       end
     end
   end
@@ -106,12 +106,12 @@ module JSONAPI
     # @return [null]
     def add_resource_fragment(fragment, include_related)
       identity = fragment.identity
-      resource = {
-          source_rids: fragment.related[@parent_relationship_name],
-          relationships: {
-              @parent_relationship.parent_resource._type => {rids: fragment.related[@parent_relationship_name]}
-          }
-      }
+      resource = { relationships: { } }
+
+      # ToDo: should we check if the inverse relationship actually exists on the resource?
+      resource[:relationships][@parent_relationship.inverse_relationship] = { rids: fragment.related_from }
+
+      # ToDo: Pull attributes and relationships from the ResourceFragments
 
       if identity.resource_klass.caching?
         resource[:cache_field] = fragment.cache
@@ -122,9 +122,9 @@ module JSONAPI
       @resources[identity] = resource
 
       # back propagate linkage to source record
-      fragment.related[@parent_relationship_name].each do |rid|
+      fragment.related_from.each do |rid|
         source_resource = source_resource_id_tree.resources[rid]
-        source_resource[:relationships][@parent_relationship_name] ||= {rids: []}
+        source_resource[:relationships][@parent_relationship_name] ||= { rids: Set.new }
         source_resource[:relationships][@parent_relationship_name][:rids] << identity
       end
     end

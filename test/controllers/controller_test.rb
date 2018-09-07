@@ -3904,17 +3904,113 @@ class Api::BoxesControllerTest < ActionController::TestCase
 
     assert_response :success
 
-    # The test is hardcoded with the include order. This should be changed at some
-    # point since either thing could come first and still be valid
-    assert_equal '10', json_response['included'][0]['id']
-    assert_equal 'things', json_response['included'][0]['type']
-    assert_nil json_response['included'][0]['relationships']['user']['data']
-    assert_equal '20', json_response['included'][0]['relationships']['things']['data'][0]['id']
-
-    assert_equal '20', json_response['included'][1]['id']
-    assert_equal 'things', json_response['included'][1]['type']
-    assert_nil json_response['included'][1]['relationships']['user']['data']
-    assert_equal '10', json_response['included'][1]['relationships']['things']['data'][0]['id']
+    assert_hash_equals(
+        {
+            "data": [
+                {
+                    "id": "100",
+                    "type": "boxes",
+                    "links": {
+                        "self": "http://test.host/api/boxes/100"
+                    },
+                    "relationships": {
+                        "things": {
+                            "links": {
+                                "self": "http://test.host/api/boxes/100/relationships/things",
+                                "related": "http://test.host/api/boxes/100/things"
+                            },
+                            "data": [
+                                {
+                                    "type": "things",
+                                    "id": "10"
+                                },
+                                {
+                                    "type": "things",
+                                    "id": "20"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ],
+            "included": [
+                {
+                    "id": "10",
+                    "type": "things",
+                    "links": {
+                        "self": "http://test.host/api/things/10"
+                    },
+                    "relationships": {
+                        "box": {
+                            "links": {
+                                "self": "http://test.host/api/things/10/relationships/box",
+                                "related": "http://test.host/api/things/10/box"
+                            },
+                            "data": {
+                                "type": "boxes",
+                                "id": "100"
+                            }
+                        },
+                        "user": {
+                            "links": {
+                                "self": "http://test.host/api/things/10/relationships/user",
+                                "related": "http://test.host/api/things/10/user"
+                            }
+                        },
+                        "things": {
+                            "links": {
+                                "self": "http://test.host/api/things/10/relationships/things",
+                                "related": "http://test.host/api/things/10/things"
+                            },
+                            "data": [
+                                {
+                                    "type": "things",
+                                    "id": "20"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "id": "20",
+                    "type": "things",
+                    "links": {
+                        "self": "http://test.host/api/things/20"
+                    },
+                    "relationships": {
+                        "box": {
+                            "links": {
+                                "self": "http://test.host/api/things/20/relationships/box",
+                                "related": "http://test.host/api/things/20/box"
+                            },
+                            "data": {
+                                "type": "boxes",
+                                "id": "100"
+                            }
+                        },
+                        "user": {
+                            "links": {
+                                "self": "http://test.host/api/things/20/relationships/user",
+                                "related": "http://test.host/api/things/20/user"
+                            }
+                        },
+                        "things": {
+                            "links": {
+                                "self": "http://test.host/api/things/20/relationships/things",
+                                "related": "http://test.host/api/things/20/things"
+                            },
+                            "data": [
+                                {
+                                    "type": "things",
+                                    "id": "10"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        json_response)
   end
 
   def test_complex_includes_nested_things_secondary_users

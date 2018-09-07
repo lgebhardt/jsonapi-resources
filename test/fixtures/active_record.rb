@@ -2280,6 +2280,7 @@ module Api
 
   class UserResource < JSONAPI::Resource
     has_many :things
+    attribute :name
   end
 end
 

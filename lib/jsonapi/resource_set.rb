@@ -92,12 +92,10 @@ module JSONAPI
         flattened_tree[resource_klass][id][:cache_id] ||= resource_details[:cache_field]
 
         resource_details[:relationships].try(:each_pair) do |relationship_name, details|
-          flattened_tree[resource_klass][id][:relationships][relationship_name] ||= { rids: [] }
+          flattened_tree[resource_klass][id][:relationships][relationship_name] ||= { rids: Set.new }
 
-          if details[:rids] && details[:rids].is_a?(Array)
-            details[:rids].each do |related_rid|
-              flattened_tree[resource_klass][id][:relationships][relationship_name][:rids] << related_rid
-            end
+          if details[:rids]
+            flattened_tree[resource_klass][id][:relationships][relationship_name][:rids].merge(details[:rids])
           end
         end
       end
