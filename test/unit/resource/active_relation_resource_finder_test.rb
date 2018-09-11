@@ -128,7 +128,7 @@ class ActiveRelationResourceFinderTest < ActiveSupport::TestCase
     assert_equal 1, related_fragments.values[0].related_from.length
   end
 
-  def test_find_related_has_many_fragments_pagination_included_key
+  def test_find_relationship_fragments_has_many_fragments_pagination_included_key
     params = ActionController::Parameters.new(number: 2, size: 4)
     options = { paginator: PagedPaginator.new(params) }
     source_rids = [JSONAPI::ResourceIdentity.new(ARPostResource, 15)]

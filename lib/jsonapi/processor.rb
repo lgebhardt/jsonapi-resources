@@ -130,7 +130,7 @@ module JSONAPI
       return JSONAPI::LinksObjectOperationResult.new(:ok,
                                                      parent_resource,
                                                      resource_klass._relationship(relationship_type),
-                                                     resource_id_tree.resources.keys,
+                                                     resource_id_tree.fragments.keys,
                                                      result_options)
     end
 
@@ -409,7 +409,7 @@ module JSONAPI
       options = find_options.except(:include_directives)
       options[:cache] = relationship.resource_klass.caching?
 
-      fragments = resource.class.find_related_fragments([resource.identity], relationship_name, options)
+      fragments = resource.class.find_relationship_fragments([resource.identity], relationship_name, options)
 
       primary_resource_id_tree = PrimaryResourceIdTree.new
       primary_resource_id_tree.add_resource_fragments(fragments, include_related)
@@ -423,7 +423,7 @@ module JSONAPI
     # Note: source_resources must all be of the same type. This precludes includes through polymorphic
     # relationships. ToDo: Prevent this when parsing the includes
     def get_related(resource_klass, source_resource_id_tree, include_related, options)
-      source_rids = source_resource_id_tree.resources.keys
+      source_rids = source_resource_id_tree.fragments.keys
 
       include_related.try(:keys).try(:each) do |key|
         relationship = resource_klass._relationship(key)

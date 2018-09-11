@@ -5,7 +5,7 @@ module JSONAPI
   # the resource instances will be fetched from the cache or the record store.
   class ResourceIdTree
 
-    attr_reader :resources, :related_resource_id_trees
+    attr_reader :fragments, :related_resource_id_trees
 
     # Gets the related Resource Id Tree for a relationship, and creates it first if it does not exist
     #
@@ -19,9 +19,9 @@ module JSONAPI
 
     private
 
-    def init_included_relationships(resource, include_related)
+    def init_included_relationships(fragment, include_related)
       include_related && include_related.each_key do |relationship_name|
-        resource[:relationships][relationship_name] ||= { rids: Set.new }
+        fragment.initialize_related(relationship_name)
       end
     end
   end
@@ -30,7 +30,7 @@ module JSONAPI
 
     # Creates a PrimaryResourceIdTree with no resources and no related ResourceIdTrees
     def initialize
-      @resources ||= {}
+      @fragments ||= {}
       @related_resource_id_trees ||= {}
     end
 
@@ -53,16 +53,11 @@ module JSONAPI
     #
     # @return [null]
     def add_resource_fragment(fragment, include_related)
-      identity = fragment.identity
-      resource = {primary: true, relationships: {}}
+      fragment.primary = true
 
-      if identity.resource_klass.caching?
-        resource[:cache_field] = fragment.cache
-      end
+      init_included_relationships(fragment, include_related)
 
-      init_included_relationships(resource, include_related)
-
-      @resources[identity] = resource
+      @fragments[fragment.identity] = fragment
     end
   end
 
@@ -78,7 +73,7 @@ module JSONAPI
     #
     # @return [JSONAPI::RelatedResourceIdTree] the new or existing resource id tree for the requested relationship
     def initialize(parent_relationship, source_resource_id_tree)
-      @resources ||= {}
+      @fragments ||= {}
       @related_resource_id_trees ||= {}
 
       @parent_relationship = parent_relationship
@@ -98,35 +93,20 @@ module JSONAPI
       end
     end
 
-    # Adds a Resource Fragment to the Resources hash
+    # Adds a Resource Fragment to the fragments hash
     #
     # @param fragment [JSONAPI::ResourceFragment]
     # @param include_related [Hash]
     #
     # @return [null]
     def add_resource_fragment(fragment, include_related)
-      identity = fragment.identity
-      resource = { relationships: { } }
+      init_included_relationships(fragment, include_related)
 
-      # ToDo: should we check if the inverse relationship actually exists on the resource?
-      resource[:relationships][@parent_relationship.inverse_relationship] = { rids: fragment.related_from }
-
-      # ToDo: Pull attributes and relationships from the ResourceFragments
-
-      if identity.resource_klass.caching?
-        resource[:cache_field] = fragment.cache
-      end
-
-      init_included_relationships(resource, include_related)
-
-      @resources[identity] = resource
-
-      # back propagate linkage to source record
       fragment.related_from.each do |rid|
-        source_resource = source_resource_id_tree.resources[rid]
-        source_resource[:relationships][@parent_relationship_name] ||= { rids: Set.new }
-        source_resource[:relationships][@parent_relationship_name][:rids] << identity
+        @source_resource_id_tree.fragments[rid].add_related_identity(parent_relationship.name, fragment.identity)
       end
+
+      @fragments[fragment.identity] = fragment
     end
   end
 end

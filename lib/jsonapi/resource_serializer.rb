@@ -268,9 +268,9 @@ module JSONAPI
           if relationship_data[name]
             include_data = true
             if relationship.is_a?(JSONAPI::Relationship::ToOne)
-              rids = relationship_data[name][:rids].first
+              rids = relationship_data[name].first
             else
-              rids = relationship_data[name][:rids]
+              rids = relationship_data[name]
             end
           end
 
@@ -299,13 +299,13 @@ module JSONAPI
           if relationship_klass.is_a?(JSONAPI::Relationship::ToOne)
             # include_linkage = @always_include_to_one_linkage_data | relationship_klass.always_include_linkage_data
             if relationship_data[relationship_name]
-              rids = relationship_data[relationship_name][:rids].first
+              rids = relationship_data[relationship_name].first
               relationship['data'] = to_one_linkage(rids)
             end
           else
             # include_linkage = relationship_klass.always_include_linkage_data
             if relationship_data[relationship_name]
-              rids = relationship_data[relationship_name][:rids]
+              rids = relationship_data[relationship_name]
               relationship['data'] = to_many_linkage(rids)
             end
           end

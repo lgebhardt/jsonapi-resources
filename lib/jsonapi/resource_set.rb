@@ -81,22 +81,19 @@ module JSONAPI
 
     private
     def flatten_resource_id_tree(resource_id_tree, flattened_tree = {})
-      resource_id_tree.resources.each_pair do |resource_rid, resource_details|
+      resource_id_tree.fragments.each_pair do |resource_rid, fragment|
 
         resource_klass = resource_rid.resource_klass
         id = resource_rid.id
 
         flattened_tree[resource_klass] ||= {}
 
-        flattened_tree[resource_klass][id] ||= { primary: resource_details[:primary], relationships: {} }
-        flattened_tree[resource_klass][id][:cache_id] ||= resource_details[:cache_field]
+        flattened_tree[resource_klass][id] ||= { primary: fragment.primary, relationships: {} }
+        flattened_tree[resource_klass][id][:cache_id] ||= fragment.cache
 
-        resource_details[:relationships].try(:each_pair) do |relationship_name, details|
-          flattened_tree[resource_klass][id][:relationships][relationship_name] ||= { rids: Set.new }
-
-          if details[:rids]
-            flattened_tree[resource_klass][id][:relationships][relationship_name][:rids].merge(details[:rids])
-          end
+        fragment.related.try(:each_pair) do |relationship_name, related_rids|
+          flattened_tree[resource_klass][id][:relationships][relationship_name] ||= Set.new
+          flattened_tree[resource_klass][id][:relationships][relationship_name].merge(related_rids)
         end
       end
 
